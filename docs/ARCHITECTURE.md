@@ -28,13 +28,14 @@ controller recomputes every turn — rather than a fixed transcript.
                        │  5. tokenize(answer) → tid stream           │
                        │  6. ingest → S(t), D/R/N, materialize       │
                        └──────────────┬──────────────────────────────┘
-                                      │
-        ┌─────────────────────────────┼───────────────────────────────┐
-        │                             ▼                               │
-   ewm-sm (unchanged)          PrismML llama.cpp (unchanged)          │
-   ingest / materialize /       Bonsai 2 27B + KV cache +             │
-   noether / project           prompt cache + 262K context            │
-        └─────────────────────────────────────────────────────────────┘
+                                      |
+                                      ▼ 
+              ┌────────────────────────────────────────────────────────────┐
+              │                                                            │
+              | ewm-sm (unchanged)          PrismML llama.cpp (unchanged)  │
+              | ingest / materialize /      Bonsai 2 27B + KV cache +      │
+              | noether / project           prompt cache + 262K context    │
+              └────────────────────────────────────────────────────────────┘
 ```
 
 > query → lattice state → proposed context → Bonsai → new lattice state → …

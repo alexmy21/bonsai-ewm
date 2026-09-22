@@ -12,7 +12,7 @@ Bonsai 2 27B (PrismML ternary weights, llama.cpp fork) as the **base model**;
 ewm-sm as its **collaborative context manager**. The context Bonsai sees is a
 *proposal* recomputed every turn from the HLLSet lattice:
 
-```
+```text
 query → lattice state S(t-1) → context proposal (full|compact) → Bonsai → new S(t) → …
 ```
 
