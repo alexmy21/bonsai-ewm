@@ -14,7 +14,7 @@ a small controller **chooses what Bonsai remembers**. The conversation is
 not a fixed transcript — it is a **context proposal** rebuilt every turn
 from a compressed lattice state `S(t)`.
 
-```
+```text
 you type a question
       → the lattice state S(t-1) is read
       → a context proposal is built (full | compact | surprise | auto)
