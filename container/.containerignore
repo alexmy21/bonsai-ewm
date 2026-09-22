@@ -1,0 +1,33 @@
+# .containerignore — keep the parent-directory build context tiny.
+#
+# The documented local build uses the *parent* directory as the build
+# context (it contains both bonsai-ewm and the ewm-state-machine repo).
+# That context is ~23 GB thanks to cargo's target/ dirs and sibling
+# projects, so everything is ignored except the two source trees needed by
+# the multi-stage build. Pass it explicitly:
+#
+#   podman build --ignorefile bonsai-ewm/container/.containerignore ...
+#
+# When the context is the bonsai-ewm repo itself (git-URL ewm-sm build),
+# this file is not consulted — podman looks for .containerignore at the
+# context root, not under container/.
+
+# Ignore everything at the context root...
+*
+!bonsai-ewm
+!ewm-state-machine
+
+# ...keep only what stage 2 needs from bonsai-ewm.
+bonsai-ewm/*
+!bonsai-ewm/pyproject.toml
+!bonsai-ewm/README.md
+!bonsai-ewm/src
+!bonsai-ewm/src/**
+
+# ...and only the cargo workspace from ewm-state-machine (no target/, no
+# notebooks, no REFS — the image builds ewm-scene from source).
+ewm-state-machine/*
+!ewm-state-machine/Cargo.toml
+!ewm-state-machine/Cargo.lock
+!ewm-state-machine/crates
+!ewm-state-machine/crates/**

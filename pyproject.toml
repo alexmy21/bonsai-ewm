@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bonsai-ewm"
+version = "0.2.0"
+description = "Bonsai 2 27B through the ewm-sm lattice: a collaborative context manager with a CLI"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+dependencies = []
+
+[project.scripts]
+bonsai-ewm = "bonsai_ewm.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

@@ -1,0 +1,43 @@
+# syntax=docker/dockerfile:1
+
+# ── Stage 1: the lattice apparatus (ewm-scene) ──────────────────────────
+# EWM_SM_SRC is a directory *inside the build context* that contains the
+# ewm-state-machine repo (its Cargo workspace). For a git URL, clone the
+# repo into the context first — the Containerfile only ever COPYs a local
+# path, which is what makes it work identically under podman and docker.
+#
+# CONTROLLER_SRC is the bonsai-ewm repo directory relative to the build
+# context. Building from the parent directory (see container/README.md):
+#   podman build --ignorefile bonsai-ewm/container/.containerignore \
+#     --build-arg EWM_SM_SRC=ewm-state-machine \
+#     --build-arg CONTROLLER_SRC=bonsai-ewm \
+#     -f bonsai-ewm/container/Containerfile -t bonsai-ewm .
+ARG EWM_SM_SRC=ewm-state-machine
+ARG CONTROLLER_SRC=bonsai-ewm
+
+FROM docker.io/library/rust:1-slim AS ewm-build
+ARG EWM_SM_SRC
+RUN apt-get update && apt-get install -y git pkg-config libssl-dev && rm -rf /var/lib/apt/lists/*
+WORKDIR /src
+COPY "$EWM_SM_SRC" ./ewm-state-machine
+RUN cd ewm-state-machine && cargo build --release -p ewm-scene
+
+# ── Stage 2: the controller (Python, stdlib only) ───────────────────────
+FROM docker.io/library/python:3.12-slim
+ARG CONTROLLER_SRC
+COPY --from=ewm-build /src/ewm-state-machine/target/release/ewm-scene /usr/local/bin/ewm-scene
+COPY "$CONTROLLER_SRC" /opt/bonsai-ewm
+RUN pip install --no-cache-dir /opt/bonsai-ewm
+
+ENV EWM_SCENE_BIN=/usr/local/bin/ewm-scene
+# Point BONSAI_URL at the Bonsai llama.cpp server (host or sidecar container).
+ENV BONSAI_URL=http://127.0.0.1:8081
+ENV BONSAI_EWM_WORK=/var/lib/bonsai-ewm
+RUN mkdir -p /var/lib/bonsai-ewm
+
+# The controller is healthy when the lattice binary, the work dir and the
+# Bonsai server are all reachable.
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD ["bonsai-ewm", "--health"]
+
+ENTRYPOINT ["bonsai-ewm"]
