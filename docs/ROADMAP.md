@@ -55,6 +55,42 @@ Principles that keep the direction honest:
   token-space access (vLLM-served DeepSeek, other llama.cpp forks) can
   take its place. Enterprises demand model choice.
 
+### First vertical — Enterprise Metadata (Catalog) Management
+
+The first candidate application for the plane: **metadata catalogs as a
+governed agent vertical.** Enterprise data ontology (entities, attributes,
+relations, tags, lineage, policies) is modeled as an **HLLSet lattice**;
+the ewm proposal machinery becomes the catalog's context and governance
+plane.
+
+Why this fits:
+
+- **Catalogs are already sets + relations.** A catalog view is a
+  materialized proposal — `ewm-scene materialize` literally produces
+  ordered/set views of a frame; the pyramid path supports named
+  perceptron dimensions (one per ontology facet: schema, tags, lineage,
+  ownership).
+- **Catalog drift is a lattice diff.** Two catalog snapshots are two
+  sessions; `/diff` (D/R/N + BSS/Jaccard) is schema-drift detection with
+  content keys for point-in-time addressing.
+- **Governance is the decision layer.** Laya/Jev `choice`/`noul` gates
+  become approval and routing policies: "this schema change needs human
+  review", "route this metadata question to the lineage catalog".
+- **Agents operate on catalogs through the same loop.** DeepSeek-Harness
+  asks questions and proposes changes; bonsai-ewm controls what catalog
+  context it sees and records every action as evidence.
+
+Prior art that de-risks the vertical:
+
+- [redis_hllset_mdb](https://github.com/alexmy21/redis_hllset_mdb) — early
+  HLLSet-backed metadata database on Redis.
+- [rhs_algebra](https://github.com/alexmy21/rhs_algebra) — the later
+  version of the same line.
+- Both are superseded by the ewm line, but they already confirmed that
+  HLLSet lattices work for metadata management at enterprise scale. Their
+  lesson carries forward: **the lattice is the storage model, not just a
+  memory trick** — which is exactly what Phase 2/3 need.
+
 Phase gates (each phase starts only when its entry criterion is met):
 
 - **Phase 1 — harden the loop (now).** Current P0/P1 items + a
@@ -79,6 +115,17 @@ New roadmap items this direction adds:
 31. **Model gateway.** Generalize `BonsaiAdapter` to detect and use
     `/tokenize` + `/detokenize` on any OpenAI-compatible endpoint
     (vLLM etc.), with Bonsai as the first certified backend.
+32. **Catalog lattice spike.** Ingest a real metadata catalog
+    (tables/columns/tags/lineage) as tid frames; demonstrate
+    `materialize` = catalog view, `/diff` = schema drift, pyramid
+    perceptrons = ontology facets.
+33. **Prior-art extraction.** Read `redis_hllset_mdb` and `rhs_algebra`
+    for the Redis persistence model and the catalog operations they
+    proved out; decide what Phase 2's storage layer adopts.
+34. **Ontology mapping note.** Write the mapping from ontology
+    primitives (entity, attribute, relation, tag, lineage, policy) to
+    ewm frames / pyramid perceptrons / projection dimensions — the
+    contract the catalog adapter must implement.
 
 ---
 
