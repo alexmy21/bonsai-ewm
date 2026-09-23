@@ -24,6 +24,14 @@ nothing more than that file.
 | ewm-sm `ewm-scene` binary | built from the `ewm-state-machine` repo | the lattice apparatus (unchanged) |
 | Bonsai 2 27B | PrismML llama.cpp fork | the base model (unchanged) |
 
+## Related projects
+
+| Project | What it is |
+| --- | --- |
+| [ewm-laya-bonsai-lab](https://github.com/alexmy21/ewm-laya-bonsai-lab) | notebook collection that dissects the interaction chain this controller automates — `ewm-scene` ↔ Rust Laya ↔ Bonsai — with raw protocol traffic and a full [interaction map](https://github.com/alexmy21/ewm-laya-bonsai-lab/blob/master/docs/INTERACTION_MAP.md) |
+| [ewm-state-machine](https://github.com/alexmy21/ewm-state-machine) | the research line: HLLSet lattice crates, `ewm-scene`, and the notebooks (08–20) that led here |
+| [Bonsai-demo](https://github.com/PrismML-Eng/Bonsai-demo) | the PrismML llama.cpp fork + Bonsai 2 27B weights (unchanged, run externally) |
+
 ## Quick start (local)
 
 ```bash
