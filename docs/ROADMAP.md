@@ -15,6 +15,73 @@ Priority markers: **P0** correctness/robustness, **P1** product policy,
 
 ---
 
+## North Star — Governed Context & Control Plane for Enterprise Agents
+
+Confirmed direction (2026-09): **a closed-loop, governed agent platform
+built on top of open-source software** — not another agent framework, and
+not closed-source. The enterprise value is the *loop itself*: every agent
+action leaves evidence, every policy decision is typed and logged, and the
+whole conversation is content-addressed and diffable.
+
+Three layers:
+
+1. **Agent runtime (pluggable).** [DeepSeek-Harness](https://github.com/deepseek-ai/DeepSeek-Harness)
+   is the current candidate standard runtime: vendor-backed, tool calling,
+   planning, multi-agent workflows. The plane stays **runtime-agnostic** —
+   any harness that emits token streams and accepts policy decisions can
+   plug in (LangChain, custom, or bare model calls all qualify).
+2. **Control & memory plane (bonsai-ewm).** Context proposals, typed
+   policy decisions, content-addressed `S(t)`, session diff, per-turn
+   token accounting, D/R/N retention. This is the proprietary core.
+3. **Decision layer (Laya / Jev).** Small, calibrated, typed decisions
+   for routing, gating, and human-in-the-loop approval (`noul` gates).
+   Open models, single forward pass, auditable.
+
+The closed loop:
+
+```text
+policy → context proposal → agent action (harness) → answer tokens
+      → ingest → S(t) → diff/audit → next policy
+```
+
+Principles that keep the direction honest:
+
+- **Open components, governed loop.** ewm-sm research and Laya stay open
+  (open-core); the orchestration/audit/service layer may be proprietary.
+- **Sell governability, not autonomy.** The pitch is auditability, cost
+  attribution, and memory control — the unmet need in the "wild west".
+- **Model gateway, not model lock-in.** Bonsai is the reference because
+  of `/tokenize` + `/detokenize`; any OpenAI-compatible endpoint with
+  token-space access (vLLM-served DeepSeek, other llama.cpp forks) can
+  take its place. Enterprises demand model choice.
+
+Phase gates (each phase starts only when its entry criterion is met):
+
+- **Phase 1 — harden the loop (now).** Current P0/P1 items + a
+  memory-quality eval harness. *Entry to Phase 2:* reproducible eval
+  suite, empty-answer guard, destructive-action confirmations.
+- **Phase 2 — service & multi-session + first harness spike.** Controller
+  behind a minimal API, multi-user sessions, and one DeepSeek-Harness
+  agent loop running under bonsai-ewm context control. *Entry to
+  Phase 3:* one real pilot deployment.
+- **Phase 3 — enterprise control plane.** Tenancy/RBAC, audit export
+  from session diffs, retention/forgetting via D/R/N, on-prem packaging.
+  *Entry:* a signed pilot customer.
+
+New roadmap items this direction adds:
+
+29. **DeepSeek-Harness spike.** One agent loop where bonsai-ewm controls
+    the memory the harness sees; measure tokens, decisions, and the audit
+    trail per action.
+30. **Licensing & terms check.** DeepSeek-Harness license, DeepSeek model
+    terms for self-host, PrismML Bonsai commercial terms — before any
+    enterprise commitment.
+31. **Model gateway.** Generalize `BonsaiAdapter` to detect and use
+    `/tokenize` + `/detokenize` on any OpenAI-compatible endpoint
+    (vLLM etc.), with Bonsai as the first certified backend.
+
+---
+
 ## A. bonsai-ewm (production controller)
 
 ### A.0 Recently completed (v0.2.0, tagged)
