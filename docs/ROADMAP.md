@@ -82,14 +82,40 @@ Why this fits:
 
 Prior art that de-risks the vertical:
 
-- [redis_hllset_mdb](https://github.com/alexmy21/redis_hllset_mdb) — early
-  HLLSet-backed metadata database on Redis.
-- [rhs_algebra](https://github.com/alexmy21/rhs_algebra) — the later
-  version of the same line.
-- Both are superseded by the ewm line, but they already confirmed that
-  HLLSet lattices work for metadata management at enterprise scale. Their
-  lesson carries forward: **the lattice is the storage model, not just a
-  memory trick** — which is exactly what Phase 2/3 need.
+- [rhs_algebra](https://github.com/alexmy21/rhs_algebra) (v0.3.0, public) — a
+  Rust **Redis module** for HLLSet algebra: immutable, idempotent,
+  content-addressable sets with full set operations forming a Boolean ring
+  `H ≅ F₂^m`. ~73 Redis commands covering DRN decomposition
+  (`d:/r:/n:` bitmaps + transition docs), views, explicit lattice edges,
+  PageRank over the implicit+explicit graph, fractal descent, 3-layer
+  TokenLUT + CatalogLUT, DeBruijn graphs, and session/history chains
+  (keyspace-notification stream → `SESSION.COMMIT` → immutable
+  content-addressed views, ~22 µs logging overhead).
+- [redis_hllset_mdb](https://github.com/alexmy21/redis_hllset_mdb) — the
+  earlier line; at the time of writing it is not visible in the public
+  repo list (rhs_algebra is its public successor).
+
+Extracted lessons now documented (item 33, done in part):
+
+- **The lattice is a storage model, not a memory trick.** rhs_algebra ran
+  catalogs as content-addressed HLLSets in Redis with RediSearch +
+  RedisGraph — enterprise scale was already demonstrated there.
+- **DRN was a first-class Redis command** — schema/catalog drift via
+  `HLLSET.DRN A B` is the same math as `ewm-scene noether`, proven at
+  Redis scale.
+- **Sessions/history chains existed** (`SESSION.COMMIT`,
+  `HISTORY.ANCESTORS`) — the direct ancestor of bonsai-ewm
+  `/save` + content-key addressing.
+- **Semantic agnosticism was a design principle** — keys are structural
+  (`h:<sha1>`), domain fields live in a `{key}:m` metadata hash. The
+  ewm/bonsai line must keep this split: lattice never interprets field
+  names.
+- **Disambiguation + security mode** (`G1 subset guard`, CatalogLUT) is
+  the enterprise entity-resolution primitive to port into the catalog
+  vertical.
+- **"Lattice-native scaling" claim** — no external ANN/vector DB; union's
+  associativity/idempotence is the parallelism mechanism. Worth
+  re-validating against ewm-sm before repeating it to customers.
 
 Phase gates (each phase starts only when its entry criterion is met):
 
@@ -119,13 +145,23 @@ New roadmap items this direction adds:
     (tables/columns/tags/lineage) as tid frames; demonstrate
     `materialize` = catalog view, `/diff` = schema drift, pyramid
     perceptrons = ontology facets.
-33. **Prior-art extraction.** Read `redis_hllset_mdb` and `rhs_algebra`
-    for the Redis persistence model and the catalog operations they
-    proved out; decide what Phase 2's storage layer adopts.
+33. **Prior-art extraction.** ✅ partially done — rhs_algebra v0.3.0 read
+    and its lessons recorded above. Remaining: read its
+    `DOCS/dev/ARCHITECTURE.md` + notebooks for the Redis persistence
+    details, and confirm the `redis_hllset_mdb` repo name/visibility.
 34. **Ontology mapping note.** Write the mapping from ontology
     primitives (entity, attribute, relation, tag, lineage, policy) to
     ewm frames / pyramid perceptrons / projection dimensions — the
     contract the catalog adapter must implement.
+35. **rhs_algebra → ewm gap analysis.** A table mapping every
+    rhs_algebra capability (DRN, views, edges/PageRank, fractal descent,
+    TokenLUT/CatalogLUT, DeBruijn, sessions/history, G1 security mode)
+    to its ewm/bonsai equivalent or gap — the scoping document for the
+    Phase 2 catalog storage layer.
+36. **Disambiguation / entity-resolution study.** The CatalogLUT +
+    `G1 subset guard` pattern is enterprise entity resolution on
+    fingerprints; test it on synthetic metadata to see what carries
+    into the ewm LUT crates.
 
 ---
 
