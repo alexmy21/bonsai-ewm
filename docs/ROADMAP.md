@@ -82,18 +82,28 @@ Why this fits:
 
 Prior art that de-risks the vertical:
 
-- [rhs_algebra](https://github.com/alexmy21/rhs_algebra) (v0.3.0, public) — a
-  Rust **Redis module** for HLLSet algebra: immutable, idempotent,
-  content-addressable sets with full set operations forming a Boolean ring
-  `H ≅ F₂^m`. ~73 Redis commands covering DRN decomposition
-  (`d:/r:/n:` bitmaps + transition docs), views, explicit lattice edges,
-  PageRank over the implicit+explicit graph, fractal descent, 3-layer
-  TokenLUT + CatalogLUT, DeBruijn graphs, and session/history chains
-  (keyspace-notification stream → `SESSION.COMMIT` → immutable
-  content-addressed views, ~22 µs logging overhead).
-- [redis_hllset_mdb](https://github.com/alexmy21/redis_hllset_mdb) — the
-  earlier line; at the time of writing it is not visible in the public
-  repo list (rhs_algebra is its public successor).
+- [hllset-next-v2](https://github.com/alexmy21/hllset-next-v2) — the
+  **canonical HLLSet core (gen2)**. 12 crates, contracts-first
+  (`hllset-contracts`: Murmur3/sha1, `BitAddress` hinge, token encodings),
+  IICA core, the LUT lattice, the two morphisms (single-touch ingest,
+  LUT-first materialize), the Noether context (`S(t)`, D/R/N invariants,
+  tropical follow matrix), five derived ranks, Lua/Forth frontends, and
+  embedded CID storage (Memory + Sled). It deliberately **dropped the
+  legacy Redis storage crate** — so a Redis backend for the metadata
+  vertical must be a *new* storage crate aligned to gen2 contracts, not a
+  revival of the legacy module.
+- [rhs_algebra](https://github.com/alexmy21/rhs_algebra) (v0.3.0, public) —
+  the latest **Redis-targeted** development: a Rust Redis module with
+  immutable, idempotent, content-addressable HLLSets, ~73 commands, DRN
+  decomposition (`d:/r:/n:` bitmaps + transition docs), views, explicit
+  lattice edges, PageRank, fractal descent, 3-layer TokenLUT +
+  CatalogLUT, DeBruijn graphs, and session/history chains
+  (`SESSION.COMMIT` → immutable content-addressed views, ~22 µs logging
+  overhead). Built on the *previous* core generation — hence the
+  refactoring item below.
+- The other public hllset/metadata repos (`redis-mds`, `redis-meta`,
+  `redis-meta-engine`, `db_metadata`, `SGS_Redis`, …) are
+  **reference-only** — not part of the forward line.
 
 Extracted lessons now documented (item 33, done in part):
 
@@ -113,9 +123,11 @@ Extracted lessons now documented (item 33, done in part):
 - **Disambiguation + security mode** (`G1 subset guard`, CatalogLUT) is
   the enterprise entity-resolution primitive to port into the catalog
   vertical.
-- **"Lattice-native scaling" claim** — no external ANN/vector DB; union's
-  associativity/idempotence is the parallelism mechanism. Worth
-  re-validating against ewm-sm before repeating it to customers.
+- **Core drift is real.** The HLLSet core drifted across the line; gen2
+  (`hllset-next-v2`) is the corrected reference. Anything Redis-facing
+  must be aligned to gen2 contracts, and the ewm-sm hllset crates will
+  eventually need a reconciliation plan (respecting the "never modify
+  ewm-sm crates in place" invariant until a migration is designed).
 
 Phase gates (each phase starts only when its entry criterion is met):
 
@@ -146,22 +158,36 @@ New roadmap items this direction adds:
     `materialize` = catalog view, `/diff` = schema drift, pyramid
     perceptrons = ontology facets.
 33. **Prior-art extraction.** ✅ partially done — rhs_algebra v0.3.0 read
-    and its lessons recorded above. Remaining: read its
-    `DOCS/dev/ARCHITECTURE.md` + notebooks for the Redis persistence
-    details, and confirm the `redis_hllset_mdb` repo name/visibility.
+    and its lessons recorded above; `redis_hllset_mdb` is skipped (the
+    other public hllset/metadata repos are reference-only). Remaining:
+    read rhs_algebra's `DOCS/dev/ARCHITECTURE.md` + notebooks for the
+    Redis persistence details, and hllset-next-v2's
+    `_DOCS/dev/HLLSET_DEVELOPER_GUIDE.md` for the gen2 contracts.
 34. **Ontology mapping note.** Write the mapping from ontology
     primitives (entity, attribute, relation, tag, lineage, policy) to
     ewm frames / pyramid perceptrons / projection dimensions — the
     contract the catalog adapter must implement.
-35. **rhs_algebra → ewm gap analysis.** A table mapping every
+35. **rhs_algebra → gen2 gap analysis.** A table mapping every
     rhs_algebra capability (DRN, views, edges/PageRank, fractal descent,
     TokenLUT/CatalogLUT, DeBruijn, sessions/history, G1 security mode)
-    to its ewm/bonsai equivalent or gap — the scoping document for the
-    Phase 2 catalog storage layer.
+    to its gen2 (`hllset-next-v2`) or ewm/bonsai equivalent or gap —
+    the scoping document for the Redis metadata backend.
 36. **Disambiguation / entity-resolution study.** The CatalogLUT +
     `G1 subset guard` pattern is enterprise entity resolution on
     fingerprints; test it on synthetic metadata to see what carries
-    into the ewm LUT crates.
+    into the gen2 LUT crates.
+37. **Redis backend decision + gen2 storage crate.** Decide Redis as the
+    Phase 2/3 metadata backend (recommended: Redis is already trusted in
+    enterprise stacks). Implement a **new** gen2-aligned Redis storage
+    crate — contracts from `hllset-contracts`, CIDs from `hllset-cid`,
+    DRN from `hllset-context`, command surface from rhs_algebra's 73
+    commands as the API spec. This is a refactor/reimplementation, not a
+    port of the legacy module (gen2 dropped `hllset-storage-redis`).
+38. **Core reconciliation plan.** The ewm-sm hllset crates predate the
+    gen2 core; design a migration plan that gets the production line onto
+    gen2 contracts without violating the "never modify ewm-sm crates in
+    place" invariant (candidate: freeze ewm-sm, point bonsai-ewm at the
+    gen2 CLI once `ewm-scene` parity exists).
 
 ---
 
