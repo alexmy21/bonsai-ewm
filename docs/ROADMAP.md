@@ -123,11 +123,13 @@ Extracted lessons now documented (item 33, done in part):
 - **Disambiguation + security mode** (`G1 subset guard`, CatalogLUT) is
   the enterprise entity-resolution primitive to port into the catalog
   vertical.
-- **Core drift is real.** The HLLSet core drifted across the line; gen2
-  (`hllset-next-v2`) is the corrected reference. Anything Redis-facing
-  must be aligned to gen2 contracts, and the ewm-sm hllset crates will
-  eventually need a reconciliation plan (respecting the "never modify
-  ewm-sm crates in place" invariant until a migration is designed).
+- **Core lineage.** The HLLSet core drifted across the line; gen2
+  (`hllset-next-v2`) is the reference, and the **ewm-sm hllset crates are
+  its cleaner decomposition** — semantically intended to be identical, but
+  that identity is *assumed, not yet verified*. Before the Redis backend
+  is built on ewm-sm crates, run the item 38 cross-check harness to turn
+  the assumption into evidence (respecting the "never modify ewm-sm
+  crates in place" invariant — we consume them, we don't change them).
 
 Phase gates (each phase starts only when its entry criterion is met):
 
@@ -176,22 +178,28 @@ New roadmap items this direction adds:
     `G1 subset guard` pattern is enterprise entity resolution on
     fingerprints; test it on synthetic metadata to see what carries
     into the gen2 LUT crates.
-37. **Redis backend: sidecar + `rds-hllset` adapter (decided).** Redis is
-    the Phase 2/3 metadata backend. Architecture: the Redis HLLSet module
-    (`rhs_algebra`) stays **unchanged (or minimal changes)** and is used
-    as a normal database; a **sidecar service — the `rds-hllset`
-    adapter** — sits in front of it and speaks the `ewm-scene` JSON
-    protocol (`ingest`, `materialize`, `noether`, `bss`, …), so
-    bonsai-ewm sees Redis-backed storage as just another lattice process
-    (zero controller changes). Gen2 alignment lives **in the adapter
-    layer**: map gen2 semantics onto the module's 73 commands; add only
-    the missing pieces there. Keep the adapter portable across Redis,
-    Valkey, and managed Redis-compatible services (license-safe).
-38. **Core reconciliation plan.** The ewm-sm hllset crates predate the
-    gen2 core; design a migration plan that gets the production line onto
-    gen2 contracts without violating the "never modify ewm-sm crates in
-    place" invariant (candidate: freeze ewm-sm, point bonsai-ewm at the
-    gen2 CLI once `ewm-scene` parity exists).
+37. **Redis backend: sidecar + `rds-hllset` adapter, built on ewm-sm
+    crates (decided).** Redis is the Phase 2/3 metadata backend. The
+    Redis HLLSet module (`rhs_algebra`) stays **unchanged (or minimal
+    changes)** and is used as a normal database; a **sidecar service —
+    the `rds-hllset` adapter** — sits in front of it and speaks the
+    `ewm-scene` JSON protocol (`ingest`, `materialize`, `noether`,
+    `bss`, …), so bonsai-ewm sees Redis-backed storage as just another
+    lattice process (zero controller changes). The adapter's semantic
+    engine is the **ewm-sm hllset crates** (the cleaner decomposition of
+    hllset-next, same line as the production controller) — the module
+    stays a dumb, fast, replaceable store. *Prerequisite:* item 38
+    verification passes. Keep the adapter portable across Redis, Valkey,
+    and managed Redis-compatible services (license-safe).
+38. **Semantic-identity verification (hllset-next ↔ ewm-sm).** ewm-sm's
+    hllset crates are intended to be semantically identical to
+    `hllset-next-v2`, but that is unverified. Build a cross-check
+    harness: feed the same input frames to both lines and compare content
+    keys, popcounts, D/R/N series, and materialized order. Document any
+    divergence; on success, the ewm-sm crates become the single semantic
+    authority for the Redis adapter and the production line. On
+    divergence, decide per-feature which side is canonical before item 37
+    starts.
 
 ---
 
