@@ -13,6 +13,10 @@ product split across two lines:
 Priority markers: **P0** correctness/robustness, **P1** product policy,
 **P2** ergonomics/research depth, **P3** distribution polish.
 
+Team split: [docs/TEAM_ASSIGNMENTS.md](TEAM_ASSIGNMENTS.md) — Team A
+(Agent Interface, bonsai-ewm side) vs Team B (EMDM Redis Backend),
+converging on the shared `ewm-scene` JSON protocol and conformance suite.
+
 ---
 
 ## North Star — Governed Context & Control Plane for Enterprise Agents

@@ -13,7 +13,9 @@ The architecture is documented in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 End users should start with the [docs/USER_GUIDE.md](docs/USER_GUIDE.md) —
 every command, typical scenarios, and known limitations.
 The forward plan for this repo and the interaction-chain lab lives in
-[docs/ROADMAP.md](docs/ROADMAP.md).
+[docs/ROADMAP.md](docs/ROADMAP.md); the two-team development split
+(Agent Interface vs EMDM Redis Backend) is finalized in
+[docs/TEAM_ASSIGNMENTS.md](docs/TEAM_ASSIGNMENTS.md).
 Machine-specific setup and the next-tasks list live in
 [docs/SESSION_HANDOFF.md](docs/SESSION_HANDOFF.md) — a fresh session needs
 nothing more than that file.
@@ -128,6 +130,7 @@ bonsai-ewm/
     ├── USER_GUIDE.md      # end-user guide: commands, scenarios, limitations
     ├── ARCHITECTURE.md    # how the collaborative model works
     ├── ROADMAP.md         # forward plan for this repo + the interaction lab
+    ├── TEAM_ASSIGNMENTS.md # Agent Interface vs EMDM Redis Backend split
     └── SESSION_HANDOFF.md # machine facts + next tasks for a fresh session
 ```
 
