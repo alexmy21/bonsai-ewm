@@ -176,13 +176,17 @@ New roadmap items this direction adds:
     `G1 subset guard` pattern is enterprise entity resolution on
     fingerprints; test it on synthetic metadata to see what carries
     into the gen2 LUT crates.
-37. **Redis backend decision + gen2 storage crate.** Decide Redis as the
-    Phase 2/3 metadata backend (recommended: Redis is already trusted in
-    enterprise stacks). Implement a **new** gen2-aligned Redis storage
-    crate — contracts from `hllset-contracts`, CIDs from `hllset-cid`,
-    DRN from `hllset-context`, command surface from rhs_algebra's 73
-    commands as the API spec. This is a refactor/reimplementation, not a
-    port of the legacy module (gen2 dropped `hllset-storage-redis`).
+37. **Redis backend: sidecar + `rds-hllset` adapter (decided).** Redis is
+    the Phase 2/3 metadata backend. Architecture: the Redis HLLSet module
+    (`rhs_algebra`) stays **unchanged (or minimal changes)** and is used
+    as a normal database; a **sidecar service — the `rds-hllset`
+    adapter** — sits in front of it and speaks the `ewm-scene` JSON
+    protocol (`ingest`, `materialize`, `noether`, `bss`, …), so
+    bonsai-ewm sees Redis-backed storage as just another lattice process
+    (zero controller changes). Gen2 alignment lives **in the adapter
+    layer**: map gen2 semantics onto the module's 73 commands; add only
+    the missing pieces there. Keep the adapter portable across Redis,
+    Valkey, and managed Redis-compatible services (license-safe).
 38. **Core reconciliation plan.** The ewm-sm hllset crates predate the
     gen2 core; design a migration plan that gets the production line onto
     gen2 contracts without violating the "never modify ewm-sm crates in
