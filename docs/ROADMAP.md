@@ -19,6 +19,169 @@ converging on the shared `ewm-scene` JSON protocol and conformance suite.
 
 ---
 
+## A. bonsai-ewm (production controller)
+
+### A.0 Recently completed (v0.2.0, tagged)
+
+- `auto` proposal — real TypeSafe Jev decides mode + cap per turn (mock
+  fallback).
+- `surprise` proposal mode — D-part + Noether-flagged frame tids.
+- Persistent, addressable sessions — `/save`, `/load`, `/sessions`,
+  `/diff` by content key.
+- `bonsai-ewm --health`, podman HEALTHCHECK, CI workflow, user guide.
+
+### A.1 Correctness & robustness (P0)
+
+1. **Empty-answer guard.** Bonsai is a reasoning model: with a small
+   `max_tokens`, the reasoning trace can consume the whole budget and
+   `content` returns empty. The chain then ingests an empty frame
+   (`pop=0`) silently. Add detection (empty `content` but non-empty
+   `reasoning_content`) and either retry with a larger budget or record
+   the event explicitly in the turn record.
+2. **`--reasoning-preserve` evaluation.** The server log suggests
+   `--reasoning-preserve`; measure its effect on `prompt_tokens` /
+   `content` / empty-answer rate before adopting it in
+   `scripts/start_bonsai_server.sh`.
+3. **Confirm destructive commands.** `/reset` and `/load` currently
+   discard unsaved state with no prompt. Add a confirmation (or
+   `--yes`) and an "unsaved turns" warning on `/quit`.
+4. **In-flight cancellation.** Ctrl-C during `ask()` aborts with a
+   traceback; make it cancel the HTTP request cleanly and return to the
+   prompt. Ctrl-C at an empty prompt should clear the line, not exit.
+5. **Materialize fallback visibility.** The 1–2-tid materializer panic
+   already falls back to raw tids; surface a flag in the turn record so
+   downstream logic knows "restored order" was approximated.
+
+### A.2 Context policy (P1)
+
+6. **Feed Noether features to Jev.** The `auto` advisor state currently
+   has pop/memory counts only. Add `dp/ind1/ind2/ind3`, sidecar
+   `step`/`jumps`, and last Jaccard so Jev can choose `surprise` with
+   informed thresholds — the lesson from notebook 04.
+7. **Adaptive surprise thresholds.** Keep the manual `/surprise`
+   override, but add a "auto" setting that derives thresholds from the
+   trajectory (mean + 3σ, like the sidecar jump detector).
+8. **Budget semantics.** `cap` is in tids; report the detokenized
+   character/word count of the proposal too, so the cap is
+   interpretable in text terms.
+9. **Ingest the decision.** The trainer line ingests `jev_*` decision
+   tokens into the union; decide whether bonsai-ewm should too (makes
+   the policy itself a lattice-visible frame).
+
+### A.3 Sessions (P1)
+
+10. **Per-frame diff timelines.** `/diff` compares only the two final
+    states. Add the per-turn D/R/N + BSS/Jaccard series between two
+    sessions so *where* they diverged is visible, not just *that* they
+    diverged.
+11. **`ewm-git`-backed addressing.** If the research line converges on
+    it, adopt `ewm-git` for content-addressed session storage; until
+    then, keep the plain `sessions/<key>/` layout.
+12. **Export/import.** A session bundle (union + meta) the user can copy
+    out of `BONSAI_EWM_WORK`; currently it is just local files.
+13. **Same-key overwrite warning.** Saving two conversations that
+    converge to the same S(t) silently overwrites the earlier metadata;
+    warn and offer to keep both (e.g. `key#n`).
+
+### A.4 REPL ergonomics (P2)
+
+14. **Persistent history + completion.** Save readline history across
+    restarts; tab-complete commands and saved session keys.
+15. **Richer `/history`.** Browse full answers (not the 50-char
+    preview), show the reasoning trace on demand, resend a past query.
+16. **Multi-line input.** A paste mode / continuation marker for long
+    prompts.
+
+### A.5 Distribution (P3)
+
+17. **Single-file install.** The package is stdlib-only — a zipapp
+    (`bonsai-ewm.pyz`) is feasible and would remove the pip step.
+18. **Release automation.** On a version tag, CI should build the
+    container image and push it to a registry (e.g. ghcr.io), not just
+    build-and-discard.
+19. **Bonsai sidecar example.** Document a compose/pod for
+    Bonsai-server + controller with the health checks wired.
+
+---
+
+## B. ewm-laya-bonsai-lab (interaction-chain notebooks)
+
+### B.0 Completed
+
+- Six notebooks (ewm-scene surface, Laya daemon surface, Bonsai HTTP
+  surface, ewm→Laya, full chain, decision models compared) plus
+  `docs/INTERACTION_MAP.md`, all executed live.
+
+### B.1 Next notebooks (in suggested order)
+
+20. **Confidence gating over a long trajectory.** Run Laya's choice with
+    a confidence floor + fallback across many turns; plot confidence,
+    gates, and sidecar `step`/`jumps` together (the notebook 16 idea,
+    zoomed into the gating mechanics).
+21. **Per-frame session diff.** Build the two-session D/R/N timeline
+    that bonsai-ewm's `/diff` should later expose (feeds A.3.10).
+22. **Jev vs Laya A/B.** Same route states, N turns, both decision
+    models side by side — measures agreement, latency, and where the
+    hosted and local models disagree.
+23. **Laya prompt study.** Prose vs struct states; state truncation
+    (JSONL path doesn't flag it); how the temperature buckets change
+    distributions. Use the laya-rust web console's prompt inspector as
+    the visual reference.
+24. **Frozen sidecar features.** `ewm-scene sidecar --freeze N` gives a
+    fixed-dim soft-key series; feed its step/DFT features to Laya and
+    see whether the decision tracks periodicity.
+25. **Bonsai reasoning split.** Measure `reasoning_content` vs `content`
+    token shares for different `max_tokens`; find the minimum budget
+    where empty answers stop (feeds A.1.1/A.1.2).
+
+### B.2 Lab infrastructure (P2)
+
+26. **Reusable clients.** `lab/` is importable as-is; optionally add a
+    `pyproject.toml` so notebooks can `pip install -e .`.
+27. **Notebook smoke in CI.** Execute notebooks 01/02/04 headlessly
+    (they need no GPU); skip or mock 03/05 when Bonsai is absent.
+28. **Laya CUDA.** Revisit when the driver/nvcc PTX mismatch is fixed
+    (nvcc 12.8 targets ISA 8.7; driver 565.77 supports ≤ 12.7); then
+    benchmark CPU vs CUDA decisions.
+
+---
+
+## C. Cross-cutting notes (lessons already learned — keep these true)
+
+- **ewm-sm crates are never modified** — only the `ewm-scene` JSON
+  protocol is consumed.
+- **`bonsai_ewm` stays Python-stdlib-only**; Bonsai and ewm-sm remain
+  external processes.
+- **Research line and production line evolve independently** — the lab
+  documents raw traffic and discovers lessons; bonsai-ewm ports only
+  the ones that earn their keep.
+- **Bonsai server:** never set `CUDA_VISIBLE_DEVICES` (the PrismML fork
+  orders GPUs opposite to `nvidia-smi`; its CUDA0 is the RTX 3060).
+- **Laya:** CPU-only on this machine for now; it rewards prose states;
+  the JSONL path silently truncates long states.
+- **Bonsai:** reasoning model — `content` can be empty when reasoning
+  eats `max_tokens`.
+- **ewm-scene:** `materialize` panics on 1–2-tid frames; `ingest` and
+  `noether` are safe on tiny frames.
+- **Git:** both repos use SSH remotes; push from any shell/VS Code
+  without credential prompts.
+
+---
+
+## D. Suggested next three sessions
+
+1. **Robustness sprint (P0).** bonsai-ewm: empty-answer guard +
+   confirmation on `/reset` `/load` + clean Ctrl-C. Lab: notebook 20
+   (confidence gating) started.
+2. **Policy sprint (P1).** bonsai-ewm: Noether features into the `auto`
+   advisor + adaptive surprise thresholds. Lab: notebooks 22/23 (Jev vs
+   Laya, prompt study).
+3. **Sessions sprint (P1).** bonsai-ewm: per-frame `/diff` timelines +
+   export/import. Lab: notebook 21 feeding that feature, then push and
+   let CI go green on the tag.
+
+---
+
 ## North Star — Governed Context & Control Plane for Enterprise Agents
 
 Confirmed direction (2026-09): **a closed-loop, governed agent platform
@@ -204,166 +367,3 @@ New roadmap items this direction adds:
     authority for the Redis adapter and the production line. On
     divergence, decide per-feature which side is canonical before item 37
     starts.
-
----
-
-## A. bonsai-ewm (production controller)
-
-### A.0 Recently completed (v0.2.0, tagged)
-
-- `auto` proposal — real TypeSafe Jev decides mode + cap per turn (mock
-  fallback).
-- `surprise` proposal mode — D-part + Noether-flagged frame tids.
-- Persistent, addressable sessions — `/save`, `/load`, `/sessions`,
-  `/diff` by content key.
-- `bonsai-ewm --health`, podman HEALTHCHECK, CI workflow, user guide.
-
-### A.1 Correctness & robustness (P0)
-
-1. **Empty-answer guard.** Bonsai is a reasoning model: with a small
-   `max_tokens`, the reasoning trace can consume the whole budget and
-   `content` returns empty. The chain then ingests an empty frame
-   (`pop=0`) silently. Add detection (empty `content` but non-empty
-   `reasoning_content`) and either retry with a larger budget or record
-   the event explicitly in the turn record.
-2. **`--reasoning-preserve` evaluation.** The server log suggests
-   `--reasoning-preserve`; measure its effect on `prompt_tokens` /
-   `content` / empty-answer rate before adopting it in
-   `scripts/start_bonsai_server.sh`.
-3. **Confirm destructive commands.** `/reset` and `/load` currently
-   discard unsaved state with no prompt. Add a confirmation (or
-   `--yes`) and an "unsaved turns" warning on `/quit`.
-4. **In-flight cancellation.** Ctrl-C during `ask()` aborts with a
-   traceback; make it cancel the HTTP request cleanly and return to the
-   prompt. Ctrl-C at an empty prompt should clear the line, not exit.
-5. **Materialize fallback visibility.** The 1–2-tid materializer panic
-   already falls back to raw tids; surface a flag in the turn record so
-   downstream logic knows "restored order" was approximated.
-
-### A.2 Context policy (P1)
-
-6. **Feed Noether features to Jev.** The `auto` advisor state currently
-   has pop/memory counts only. Add `dp/ind1/ind2/ind3`, sidecar
-   `step`/`jumps`, and last Jaccard so Jev can choose `surprise` with
-   informed thresholds — the lesson from notebook 04.
-7. **Adaptive surprise thresholds.** Keep the manual `/surprise`
-   override, but add a "auto" setting that derives thresholds from the
-   trajectory (mean + 3σ, like the sidecar jump detector).
-8. **Budget semantics.** `cap` is in tids; report the detokenized
-   character/word count of the proposal too, so the cap is
-   interpretable in text terms.
-9. **Ingest the decision.** The trainer line ingests `jev_*` decision
-   tokens into the union; decide whether bonsai-ewm should too (makes
-   the policy itself a lattice-visible frame).
-
-### A.3 Sessions (P1)
-
-10. **Per-frame diff timelines.** `/diff` compares only the two final
-    states. Add the per-turn D/R/N + BSS/Jaccard series between two
-    sessions so *where* they diverged is visible, not just *that* they
-    diverged.
-11. **`ewm-git`-backed addressing.** If the research line converges on
-    it, adopt `ewm-git` for content-addressed session storage; until
-    then, keep the plain `sessions/<key>/` layout.
-12. **Export/import.** A session bundle (union + meta) the user can copy
-    out of `BONSAI_EWM_WORK`; currently it is just local files.
-13. **Same-key overwrite warning.** Saving two conversations that
-    converge to the same S(t) silently overwrites the earlier metadata;
-    warn and offer to keep both (e.g. `key#n`).
-
-### A.4 REPL ergonomics (P2)
-
-14. **Persistent history + completion.** Save readline history across
-    restarts; tab-complete commands and saved session keys.
-15. **Richer `/history`.** Browse full answers (not the 50-char
-    preview), show the reasoning trace on demand, resend a past query.
-16. **Multi-line input.** A paste mode / continuation marker for long
-    prompts.
-
-### A.5 Distribution (P3)
-
-17. **Single-file install.** The package is stdlib-only — a zipapp
-    (`bonsai-ewm.pyz`) is feasible and would remove the pip step.
-18. **Release automation.** On a version tag, CI should build the
-    container image and push it to a registry (e.g. ghcr.io), not just
-    build-and-discard.
-19. **Bonsai sidecar example.** Document a compose/pod for
-    Bonsai-server + controller with the health checks wired.
-
----
-
-## B. ewm-laya-bonsai-lab (interaction-chain notebooks)
-
-### B.0 Completed
-
-- Six notebooks (ewm-scene surface, Laya daemon surface, Bonsai HTTP
-  surface, ewm→Laya, full chain, decision models compared) plus
-  `docs/INTERACTION_MAP.md`, all executed live.
-
-### B.1 Next notebooks (in suggested order)
-
-20. **Confidence gating over a long trajectory.** Run Laya's choice with
-    a confidence floor + fallback across many turns; plot confidence,
-    gates, and sidecar `step`/`jumps` together (the notebook 16 idea,
-    zoomed into the gating mechanics).
-21. **Per-frame session diff.** Build the two-session D/R/N timeline
-    that bonsai-ewm's `/diff` should later expose (feeds A.3.10).
-22. **Jev vs Laya A/B.** Same route states, N turns, both decision
-    models side by side — measures agreement, latency, and where the
-    hosted and local models disagree.
-23. **Laya prompt study.** Prose vs struct states; state truncation
-    (JSONL path doesn't flag it); how the temperature buckets change
-    distributions. Use the laya-rust web console's prompt inspector as
-    the visual reference.
-24. **Frozen sidecar features.** `ewm-scene sidecar --freeze N` gives a
-    fixed-dim soft-key series; feed its step/DFT features to Laya and
-    see whether the decision tracks periodicity.
-25. **Bonsai reasoning split.** Measure `reasoning_content` vs `content`
-    token shares for different `max_tokens`; find the minimum budget
-    where empty answers stop (feeds A.1.1/A.1.2).
-
-### B.2 Lab infrastructure (P2)
-
-26. **Reusable clients.** `lab/` is importable as-is; optionally add a
-    `pyproject.toml` so notebooks can `pip install -e .`.
-27. **Notebook smoke in CI.** Execute notebooks 01/02/04 headlessly
-    (they need no GPU); skip or mock 03/05 when Bonsai is absent.
-28. **Laya CUDA.** Revisit when the driver/nvcc PTX mismatch is fixed
-    (nvcc 12.8 targets ISA 8.7; driver 565.77 supports ≤ 12.7); then
-    benchmark CPU vs CUDA decisions.
-
----
-
-## C. Cross-cutting notes (lessons already learned — keep these true)
-
-- **ewm-sm crates are never modified** — only the `ewm-scene` JSON
-  protocol is consumed.
-- **`bonsai_ewm` stays Python-stdlib-only**; Bonsai and ewm-sm remain
-  external processes.
-- **Research line and production line evolve independently** — the lab
-  documents raw traffic and discovers lessons; bonsai-ewm ports only
-  the ones that earn their keep.
-- **Bonsai server:** never set `CUDA_VISIBLE_DEVICES` (the PrismML fork
-  orders GPUs opposite to `nvidia-smi`; its CUDA0 is the RTX 3060).
-- **Laya:** CPU-only on this machine for now; it rewards prose states;
-  the JSONL path silently truncates long states.
-- **Bonsai:** reasoning model — `content` can be empty when reasoning
-  eats `max_tokens`.
-- **ewm-scene:** `materialize` panics on 1–2-tid frames; `ingest` and
-  `noether` are safe on tiny frames.
-- **Git:** both repos use SSH remotes; push from any shell/VS Code
-  without credential prompts.
-
----
-
-## D. Suggested next three sessions
-
-1. **Robustness sprint (P0).** bonsai-ewm: empty-answer guard +
-   confirmation on `/reset` `/load` + clean Ctrl-C. Lab: notebook 20
-   (confidence gating) started.
-2. **Policy sprint (P1).** bonsai-ewm: Noether features into the `auto`
-   advisor + adaptive surprise thresholds. Lab: notebooks 22/23 (Jev vs
-   Laya, prompt study).
-3. **Sessions sprint (P1).** bonsai-ewm: per-frame `/diff` timelines +
-   export/import. Lab: notebook 21 feeding that feature, then push and
-   let CI go green on the tag.
