@@ -319,9 +319,22 @@ New roadmap items this direction adds:
 30. **Licensing & terms check.** DeepSeek-Harness license, DeepSeek model
     terms for self-host, PrismML Bonsai commercial terms — before any
     enterprise commitment.
-31. **Model gateway.** Generalize `BonsaiAdapter` to detect and use
-    `/tokenize` + `/detokenize` on any OpenAI-compatible endpoint
-    (vLLM etc.), with Bonsai as the first certified backend.
+31. **Model gateway: llama.cpp + SGLang switchable (draft decision,
+    confirm next session).** Generalize `BonsaiAdapter` into a
+    `ModelBackend` interface — `chat_full()`, `tokenize()`,
+    `detokenize()`, `health()`, `tokenizer_id` — with two certified
+    backends: `llamacpp` (Bonsai, server-side `/tokenize` +
+    `/detokenize`) and `sglang` (OpenAI-compatible chat + native
+    `/tokenize` + `/detokenize`, schema verified per version). Rules:
+    (a) **pin backend + tokenizer per session** and record it in session
+    metadata — never mix tid streams from two tokenizers in one lattice;
+    (b) **conformance-test each backend** (same text → same token ids via
+    server endpoint and local tokenizer artifact); (c) record
+    `prompt_tokens` as reported, noting SGLang's RadixAttention may make
+    it cached-prefix-aware. Bonsai stays on llama.cpp (ternary GGUF);
+    SGLang is the enterprise/DeepSeek throughput path — RadixAttention's
+    automatic longest-prefix reuse is a natural ally of the context
+    proposal.
 32. **Catalog lattice spike.** Ingest a real metadata catalog
     (tables/columns/tags/lineage) as tid frames; demonstrate
     `materialize` = catalog view, `/diff` = schema drift, pyramid
