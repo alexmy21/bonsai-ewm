@@ -81,12 +81,12 @@ A backend or a client is "done" only when the suite is green.
 
 ## 3. Team A — Agent Interface (bonsai-ewm side)
 
-### Scope
+### 3.1. Scope
 
 Everything from the agent/harness boundary down to the lattice protocol —
 but not the lattice implementation or its storage.
 
-### Responsibilities
+### 3.2. Responsibilities
 
 1. **Agent runtime integration.** DeepSeek-Harness spike (roadmap item
    29): one agent loop where bonsai-ewm controls the context the harness
@@ -104,21 +104,21 @@ but not the lattice implementation or its storage.
 6. **Session & audit surface.** `/save`, `/load`, `/diff` evolution,
    per-frame diff timelines, audit export.
 
-### Deliverables
+### 3.3. Deliverables
 
 - Versioned agent-interface spec (openapi or markdown + reference client).
 - DeepSeek-Harness spike notebook/report with token+decision accounting.
 - Eval harness with a published baseline.
 - Controller release with the P0 robustness items.
 
-### Non-goals
+### 3.4.4 Non-goals
 
 - No changes to `ewm-scene`, ewm-sm crates, or Redis internals.
 - No storage/persistence engineering beyond the existing file sessions
   (Team B owns durability).
 - No model fine-tuning.
 
-### Depends on
+### 3.5. Depends on
 
 - Team B: only the shared conformance suite (green) — Team A can develop
   against `ewm-scene` until the `rds-hllset` adapter exists.
@@ -127,13 +127,13 @@ but not the lattice implementation or its storage.
 
 ## 4. Team B — EMDM Redis Backend
 
-### Scope
+### 4.1. Scope
 
 Everything from the Redis protocol down to durable, enterprise-scale
 HLLSet storage for Enterprise MetaData Management — but not controller or
 agent logic.
 
-### Responsibilities
+### 4.2. Responsibilities
 
 1. **Semantic-identity verification (roadmap item 38, first).**
    Cross-check harness: same frames through `hllset-next-v2` and ewm-sm;
@@ -154,7 +154,7 @@ agent logic.
    multi-tenant layout; define the metadata hash (`{key}:m`) contract
    between structural and domain fields.
 
-### Deliverables
+### 4.3. Deliverables
 
 - Verification report (item 38) with the canonical-side decision.
 - `rds-hllset` adapter passing the shared conformance suite.
@@ -162,14 +162,14 @@ agent logic.
   synthetic metadata.
 - Deployment artifacts + benchmark report.
 
-### Non-goals
+### 4.4. Non-goals
 
 - No changes to ewm-sm crates in place (consume as a dependency; any
   needed change is a joint escalation).
 - No agent/model/decision-model work.
 - No UI beyond a thin admin/health surface.
 
-### Depends on
+### 4.5. Depends on
 
 - Team A: nothing functional — Team B develops against the same
   conformance suite. The adapter's first customer is the Team A
